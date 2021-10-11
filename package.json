@@ -1,0 +1,20 @@
+{
+    "name": "cs545_weblog",
+    "version": "1.0.0",
+    "description": "WeBlog",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "nodemon app.js"
+    },
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "nodemon": "^2.0.7"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "express-handlebars": "^5.3.0",
+        "handlebars": "^4.7.7"
+    }
+}

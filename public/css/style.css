@@ -1,0 +1,28 @@
+.red-background {
+    background: #9D1535;
+}
+
+.container-background {
+    background: white;
+}
+
+.list-group-item-category {
+    background-color: #9D1535 !important;
+    color: white !important;
+}
+  
+.list-group-item-category .list-group-item:hover {
+    background-color: white !important;
+    color: #9D1535 !important;
+}
+
+@supports (-webkit-text-stroke: 1px #9D1535) {
+    .red-stroke-white-fill {
+      -webkit-text-stroke: 2px #9D1535;
+      -webkit-text-fill-color: white;
+    }
+}
+
+.red-text {
+    color: #9D1535;
+}
