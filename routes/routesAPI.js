@@ -13,6 +13,8 @@ jwt payload -->
   "username": "test",
   "password": "test"
 }
+
+Refer this website to make JWT online: https://jwt.io/
 */
 
 router.post("/signup", async (req, res) => {
