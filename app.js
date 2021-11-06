@@ -1,10 +1,9 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
-const session = require("express-session");
 const static = express.static(__dirname + "/public");
 const path = require("path");
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
+const jwt = require("jsonwebtoken");
 
 const configRoutes = require("./routes");
 app.use("/public", static);
@@ -12,58 +11,28 @@ app.use("/public", static);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(
-  session({
-    name: "CS545_FinalProject",
-    secret: "the quick brown fox jumps over the lazy dog",
-    saveUninitialized: true,
-    resave: false,
-    cookie: { maxAge: 60000 },
-  })
-);
+let blacklist = [];
 
-app.use("/private", (req, res, next) => {
-  if (!req.cookies.AuthCookie) {
-    return res.status(403).render("forbiddenAccess");
-  } else {
+app.use("/private", async (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null) return res.send(401);
+  if (blacklist.includes(token)) return res.sendStatus(401);
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
     next();
-  }
+  });
 });
 
 app.use("/logout", (req, res, next) => {
-  if (!req.cookies.AuthCookie) {
-    return res.redirect("/");
-  } else {
-    next();
-  }
-});
-
-app.use("/login", (req, res, next) => {
-  if (req.cookies.AuthCookie) {
-    return res.redirect("/private");
-  } else {
-    req.method = "POST";
-    next();
-  }
-});
-
-app.use(async (req, res, next) => {
-  var currentTimestamp = new Date().toUTCString();
-  var requestMethod = req.method;
-  var requestRoute = req.originalUrl;
-  var isLoggedIn = req.cookies.AuthCookie
-    ? "(Authenticated User)"
-    : "(Non-Authenticated User)";
-
-  console.log(
-    `[${currentTimestamp}]: ${requestMethod} ${requestRoute} ${isLoggedIn}`
-  );
+  blacklist.push(req.headers["authorization"].split(" ")[1]);
   next();
 });
 
 configRoutes(app);
 
-app.listen(4000, () => {
+app.listen(3000, () => {
   console.log("We've now got a server!");
-  console.log("Your routes will be running on http://localhost:4000");
+  console.log("Your routes will be running on http://localhost:3000");
 });

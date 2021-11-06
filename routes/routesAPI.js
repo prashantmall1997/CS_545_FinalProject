@@ -1,36 +1,34 @@
+require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
-const jwt_decode = require("jwt-decode");
+const jwt = require("jsonwebtoken");
 const mongoCollections = require("../config/mongoCollections");
 const users = mongoCollections.users;
 var ObjectID = require("mongodb").ObjectID;
 const saltRounds = 8;
+const jwt_decode = require("jwt-decode");
 
-/*
-jwt payload -->
-{
-  "username": "test",
-  "password": "test"
-}
-
-Refer this website to make JWT online: https://jwt.io/
-*/
+let blacklist = [];
 
 router.post("/signup", async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null) return res.send(401);
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+  });
   try {
-    var jwt = jwt_decode(req.body.jwt);
+    var payload = jwt_decode(token);
     const usersCollection = await users();
-
     const alreadyRegistered = await usersCollection.findOne({
-      username: jwt.username,
+      username: payload.username,
     });
-
     if (alreadyRegistered === null) {
-      await bcrypt.hash(jwt.password, 12, async function (err, hash) {
+      await bcrypt.hash(payload.password, 12, async function (err, hash) {
         if (!err) {
-          jwt.password = hash;
-          const newInsertInformation = await usersCollection.insertOne(jwt);
+          payload.password = hash;
+          const newInsertInformation = await usersCollection.insertOne(payload);
           if (newInsertInformation.insertedCount === 0) {
             return res.send("MongoDB function failed to add user!");
           } else {
@@ -49,11 +47,16 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-//POST /login
 router.post("/login", async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null) return res.send(401);
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+  });
   try {
-    var jwt = jwt_decode(req.body.jwt);
-    const { username, password } = jwt;
+    var payload = jwt_decode(token);
+    const { username, password } = payload;
 
     if (!username || !password) {
       res.status(401).send({
@@ -72,9 +75,11 @@ router.post("/login", async (req, res) => {
     let match = await bcrypt.compare(password, user.password);
 
     if (match) {
-      res.cookie("AuthCookie", { user: user });
-
-      res.redirect("/private");
+      const user = { user: username };
+      const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "15m",
+      });
+      res.json({ accessToken: accessToken });
     } else {
       res.status(401).send({
         error: "Username or Password is wrong!",
@@ -85,16 +90,15 @@ router.post("/login", async (req, res) => {
   }
 });
 
-//This is where blogs should be visible and posted
+//Modify this route
 router.get("/private", async (req, res) => {
-  var user = req.cookies.AuthCookie;
   res.status(200).send("MAKE BLOGS HERE");
 });
 
 router.get("/logout", async (req, res) => {
-  res.clearCookie("AuthCookie");
-  req.session.destroy();
+  blacklist.push(req.headers["authorization"].split(" ")[1]);
   res.status(200).send("User logged out");
+  console.log(blacklist);
 });
 
 module.exports = router;
